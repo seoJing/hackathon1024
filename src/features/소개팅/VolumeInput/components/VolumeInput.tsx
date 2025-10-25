@@ -25,11 +25,11 @@ export function VolumeInput({
 
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null) // 🎯 추가
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const silenceTimerRef = useRef<number | null>(null)
-  const animationFrameRef = useRef<number | null>(null) // 🎯 추가
+  const animationFrameRef = useRef<number | null>(null)
 
   // 오디오 볼륨 분석
   const analyzeVolume = () => {
@@ -38,31 +38,34 @@ export function VolumeInput({
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
     analyserRef.current.getByteFrequencyData(dataArray)
 
+    // RMS (Root Mean Square) 계산
     const sum = dataArray.reduce((acc, val) => acc + val * val, 0)
     const rms = Math.sqrt(sum / dataArray.length)
-    const level = Math.min(100, (rms / 128) * 100)
+    const level = Math.min(100, (rms / 128) * 100) // 0-100으로 정규화
 
     setVolumeLevel(level)
     onVolumeChange?.(level)
 
     // 침묵 감지
     if (level < silenceThreshold) {
+      // 침묵 시작
       if (!silenceTimerRef.current) {
         silenceTimerRef.current = window.setTimeout(() => {
           stopRecording()
         }, silenceDuration)
       }
     } else {
+      // 소리 감지 - 침묵 타이머 리셋
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current)
         silenceTimerRef.current = null
       }
     }
 
-    // 🎯 계속 반복
     animationFrameRef.current = requestAnimationFrame(analyzeVolume)
   }
 
+  // 녹음 시작
   const startRecording = async () => {
     try {
       setMessage('마이크 접근 중...')
@@ -78,7 +81,7 @@ export function VolumeInput({
       // AudioContext 설정
       audioContextRef.current = new AudioContext()
       sourceRef.current =
-        audioContextRef.current.createMediaStreamSource(stream) // 🎯 ref 저장
+        audioContextRef.current.createMediaStreamSource(stream)
       analyserRef.current = audioContextRef.current.createAnalyser()
       analyserRef.current.fftSize = 256
       analyserRef.current.smoothingTimeConstant = 0.8
@@ -107,11 +110,10 @@ export function VolumeInput({
         setMessage('제출 완료!')
       }
 
-      mediaRecorderRef.current.start(100)
+      mediaRecorderRef.current.start(100) // 100ms마다 데이터 수집
       setIsRecording(true)
       setMessage('녹음 중... (말씀해주세요)')
 
-      // 🎯 볼륨 분석 시작
       analyzeVolume()
     } catch (error) {
       console.error('마이크 접근 실패:', error)
@@ -119,10 +121,10 @@ export function VolumeInput({
     }
   }
 
+  // 녹음 중지
   const stopRecording = () => {
     setMessage('처리 중...')
 
-    // 🎯 animation frame 먼저 취소
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
@@ -147,7 +149,6 @@ export function VolumeInput({
         .forEach((track) => track.stop())
     }
 
-    // 🎯 Source disconnect
     if (sourceRef.current) {
       sourceRef.current.disconnect()
       sourceRef.current = null
@@ -162,13 +163,14 @@ export function VolumeInput({
     setVolumeLevel(0)
   }
 
+  // 컴포넌트 마운트 시 자동 시작
   useEffect(() => {
     startRecording()
 
     return () => {
       stopRecording()
     }
-  }, []) // 🤔 의도한 거면 OK
+  }, [])
 
   return (
     <div
