@@ -30,10 +30,16 @@ export function VolumeInput({
   const audioChunksRef = useRef<Blob[]>([])
   const silenceTimerRef = useRef<number | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const isRecordingRef = useRef(false) // 🎯 추가!
 
   // 오디오 볼륨 분석
   const analyzeVolume = () => {
-    if (!analyserRef.current || !isRecording) return
+    // 🎯 ref 사용
+    if (!analyserRef.current || !isRecordingRef.current) {
+      return
+    }
+
+    console.log('Analyzing volume...')
 
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
     analyserRef.current.getByteFrequencyData(dataArray)
@@ -111,9 +117,13 @@ export function VolumeInput({
       }
 
       mediaRecorderRef.current.start(100) // 100ms마다 데이터 수집
+
+      // 🎯 순서 중요: ref 먼저 업데이트
+      isRecordingRef.current = true
       setIsRecording(true)
       setMessage('녹음 중... (말씀해주세요)')
 
+      // 🎯 이제 analyzeVolume이 제대로 실행됨
       analyzeVolume()
     } catch (error) {
       console.error('마이크 접근 실패:', error)
@@ -130,6 +140,8 @@ export function VolumeInput({
       animationFrameRef.current = null
     }
 
+    // 🎯 ref도 업데이트
+    isRecordingRef.current = false
     setIsRecording(false)
 
     // 타이머 정리
