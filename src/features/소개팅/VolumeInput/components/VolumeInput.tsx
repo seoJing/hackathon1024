@@ -9,8 +9,8 @@ interface VolumeInputProps {
   setVolumeLevel: (level: number) => void
 }
 
-const silenceThreshold = 0.0001
-const speechStartThreshold = 0.00001
+const silenceThreshold = 50
+const speechStartThreshold = 50
 const silenceDuration = 2000
 
 export function VolumeInput({
