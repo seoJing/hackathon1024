@@ -2,10 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { vars } from '@/vars.css'
 
 interface VolumeInputProps {
-  /** 침묵으로 간주할 볼륨 임계값 (0-100, 기본: 5) */
-  silenceThreshold?: number
-  /** 침묵 지속 시간 (ms, 기본: 2000) */
-  silenceDuration?: number
   /** 녹음 완료 시 콜백 */
   onSubmit?: (audioBlob: Blob) => void
   /** 볼륨 변화 콜백 */
@@ -13,9 +9,11 @@ interface VolumeInputProps {
   setVolumeLevel: (level: number) => void
 }
 
+const silenceThreshold = 0.0001
+const speechStartThreshold = 0.00001
+const silenceDuration = 2000
+
 export function VolumeInput({
-  silenceThreshold = 5,
-  silenceDuration = 2000,
   onSubmit,
   onVolumeChange,
   setVolumeLevel,
@@ -30,16 +28,14 @@ export function VolumeInput({
   const audioChunksRef = useRef<Blob[]>([])
   const silenceTimerRef = useRef<number | null>(null)
   const animationFrameRef = useRef<number | null>(null)
-  const isRecordingRef = useRef(false) // 🎯 추가!
+  const isRecordingRef = useRef(false)
+  const hasSpeechStartedRef = useRef(false)
 
   // 오디오 볼륨 분석
   const analyzeVolume = () => {
-    // 🎯 ref 사용
     if (!analyserRef.current || !isRecordingRef.current) {
       return
     }
-
-    console.log('Analyzing volume...')
 
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
     analyserRef.current.getByteFrequencyData(dataArray)
@@ -52,19 +48,29 @@ export function VolumeInput({
     setVolumeLevel(level)
     onVolumeChange?.(level)
 
-    // 침묵 감지
-    if (level < silenceThreshold) {
-      // 침묵 시작
-      if (!silenceTimerRef.current) {
-        silenceTimerRef.current = window.setTimeout(() => {
-          stopRecording()
-        }, silenceDuration)
+    if (!hasSpeechStartedRef.current) {
+      if (level >= speechStartThreshold) {
+        hasSpeechStartedRef.current = true
+        setMessage('말씀 중... (침묵하면 자동 종료)')
+        console.log('음성 감지 침묵 감지 시작')
       }
     } else {
-      // 소리 감지 - 침묵 타이머 리셋
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current)
-        silenceTimerRef.current = null
+      if (level < silenceThreshold) {
+        // 침묵 시작
+        if (!silenceTimerRef.current) {
+          console.log('침묵 시작 - 타이머 시작')
+          silenceTimerRef.current = window.setTimeout(() => {
+            console.log('침묵으로 인한 녹음 종료')
+            stopRecording()
+          }, silenceDuration)
+        }
+      } else {
+        // 소리 감지 - 침묵 타이머 리셋
+        if (silenceTimerRef.current) {
+          console.log('소리 감지 - 침묵 타이머 리셋')
+          clearTimeout(silenceTimerRef.current)
+          silenceTimerRef.current = null
+        }
       }
     }
 
@@ -114,16 +120,16 @@ export function VolumeInput({
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
         onSubmit?.(audioBlob)
         setMessage('제출 완료!')
+        startRecording()
       }
 
       mediaRecorderRef.current.start(100) // 100ms마다 데이터 수집
 
-      // 🎯 순서 중요: ref 먼저 업데이트
       isRecordingRef.current = true
+      hasSpeechStartedRef.current = false
       setIsRecording(true)
-      setMessage('녹음 중... (말씀해주세요)')
+      setMessage('말씀해주세요... (음성을 기다리는 중)')
 
-      // 🎯 이제 analyzeVolume이 제대로 실행됨
       analyzeVolume()
     } catch (error) {
       console.error('마이크 접근 실패:', error)
@@ -140,8 +146,8 @@ export function VolumeInput({
       animationFrameRef.current = null
     }
 
-    // 🎯 ref도 업데이트
     isRecordingRef.current = false
+    hasSpeechStartedRef.current = false
     setIsRecording(false)
 
     // 타이머 정리

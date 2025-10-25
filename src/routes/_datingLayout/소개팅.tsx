@@ -13,12 +13,10 @@ function RouteComponent() {
   const [volumeLevel, setVolumeLevel] = useState(0)
 
   const submitCallback = (audioBlob: Blob) => {
-    // 녹음이 완료되었을 때 처리할 로직 작성
     console.log('녹음 완료:', audioBlob)
   }
 
   const volumeChangeCallback = (level: number) => {
-    // 볼륨 변화 시 처리할 로직 작성
     console.log('볼륨 변화:', level)
   }
 
