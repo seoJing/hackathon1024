@@ -20,7 +20,7 @@ export const analyzeAudio = async (
 
   formData.append('audio', audioFile)
 
-  const response = await fetch('http://localhost:8000/api/audio/analyze', {
+  const response = await fetch('http://localhost:8000/voice-chat', {
     method: 'POST',
     body: formData,
   })
