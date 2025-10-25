@@ -5,12 +5,13 @@ export const vars = createGlobalTheme('#app', {
     white: '#FFFFFF',
     black: '#0B0B0B',
 
-    main: '#006AE4',
-    mainDark: '#0054B3', // hover / 강조용
-    mainLight: '#3388ED', // 밝은 톤
-    mainLightHover: '#B4D7FF', // 밝은 톤 hover
-    mainXLight: '#E6F0FF', // 밝은 톤 배경
-    mainBorder: '#B5D3FF',
+    main: '#F48FB1', // 기본 메인 컬러 (파스텔 핑크)
+    mainDark: '#EC407A', // hover / 강조용 (짙은 핑크)
+    mainLight: '#F8BBD0', // 밝은 톤
+    mainLightHover: '#FCE4EC', // 밝은 톤 hover
+    mainXLight: '#FFF0F5', // 아주 연한 배경용
+    mainXLightOP: 'rgba(255, 240, 245, 0.8)',
+    mainBorder: '#F3C1D6', // 경계선용
 
     sub: '#F3F4F6',
     subHover: '#E5E7EB',
