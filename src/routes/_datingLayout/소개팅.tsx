@@ -1,19 +1,64 @@
 import { VolumeInput } from '@/features/소개팅/VolumeInput/components/VolumeInput'
+import { useAnalyzeAudio } from '@/features/소개팅/VolumeInput/hooks/useAnalyzeAudio'
 import VolumeMeter from '@/features/소개팅/VolumeMeter/components/VolumeMeter'
 import { Button } from '@/shared/components'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export const Route = createFileRoute('/_datingLayout/소개팅')({
   component: RouteComponent,
 })
 
+export type responseDataType = {
+  isFeedback: boolean
+  audio: Blob
+}
+
 function RouteComponent() {
   const navigate = useNavigate()
   const [volumeLevel, setVolumeLevel] = useState(0)
+  const [responseData, setResponseData] = useState<responseDataType>()
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  const { mutate: analyzeAudio, isPending } = useAnalyzeAudio({
+    onSuccess: (data) => {
+      console.log('분석 완료', data.audio)
+
+      const byteCharacters = atob(data.audio)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
+
+      setResponseData({
+        isFeedback: true,
+        audio: new Blob([byteArray], { type: 'audio/webm' }),
+      })
+    },
+    onError: (error) => {
+      alert(`분석 실패: ${error.message}`)
+    },
+  })
+
+  useEffect(() => {
+    if (!isPending && responseData?.audio) {
+      const audioUrl = URL.createObjectURL(responseData.audio)
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl
+        audioRef.current.play()
+      }
+
+      return () => {
+        URL.revokeObjectURL(audioUrl)
+      }
+    }
+  }, [isPending, responseData])
 
   const submitCallback = (audioBlob: Blob) => {
     console.log('녹음 완료:', audioBlob)
+
+    analyzeAudio({ audioBlob })
   }
 
   const volumeChangeCallback = (level: number) => {
@@ -22,6 +67,8 @@ function RouteComponent() {
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+      <audio ref={audioRef} style={{ display: 'none' }} />
+
       <VolumeInput
         setVolumeLevel={setVolumeLevel}
         onSubmit={submitCallback}
