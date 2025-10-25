@@ -7,6 +7,7 @@ interface VolumeInputProps {
   /** 볼륨 변화 콜백 */
   onVolumeChange?: (level: number) => void
   setVolumeLevel: (level: number) => void
+  isDone: boolean
 }
 
 const silenceThreshold = 0.0001
@@ -17,9 +18,9 @@ export function VolumeInput({
   onSubmit,
   onVolumeChange,
   setVolumeLevel,
+  isDone,
 }: VolumeInputProps) {
   const [message, setMessage] = useState('시작 대기중...')
-  const [isRecording, setIsRecording] = useState(false)
 
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
@@ -51,7 +52,7 @@ export function VolumeInput({
     if (!hasSpeechStartedRef.current) {
       if (level >= speechStartThreshold) {
         hasSpeechStartedRef.current = true
-        setMessage('말씀 중... (침묵하면 자동 종료)')
+        setMessage('녹음 중... (침묵하면 자동 종료)')
         console.log('음성 감지 침묵 감지 시작')
       }
     } else {
@@ -119,15 +120,13 @@ export function VolumeInput({
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
         onSubmit?.(audioBlob)
-        setMessage('제출 완료!')
-        startRecording()
+        setMessage('분석 중... 잠시만 기다려주세요')
       }
 
       mediaRecorderRef.current.start(100) // 100ms마다 데이터 수집
 
       isRecordingRef.current = true
       hasSpeechStartedRef.current = false
-      setIsRecording(true)
       setMessage('말씀해주세요... (음성을 기다리는 중)')
 
       analyzeVolume()
@@ -148,7 +147,6 @@ export function VolumeInput({
 
     isRecordingRef.current = false
     hasSpeechStartedRef.current = false
-    setIsRecording(false)
 
     // 타이머 정리
     if (silenceTimerRef.current) {
@@ -189,6 +187,14 @@ export function VolumeInput({
       stopRecording()
     }
   }, [])
+
+  // isDone이 true가 되면 자동으로 녹음 재시작
+  useEffect(() => {
+    if (isDone) {
+      console.log('대답 완료 - 녹음 재시작')
+      startRecording()
+    }
+  }, [isDone])
 
   return (
     <div

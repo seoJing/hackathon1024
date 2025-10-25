@@ -19,6 +19,7 @@ function RouteComponent() {
   const [volumeLevel, setVolumeLevel] = useState(0)
   const [responseData, setResponseData] = useState<responseDataType>()
   const audioRef = useRef<HTMLAudioElement>(null)
+  const [isDone, setIsDone] = useState(false)
 
   const { mutate: analyzeAudio, isPending } = useAnalyzeAudio({
     onSuccess: (data) => {
@@ -44,6 +45,7 @@ function RouteComponent() {
   useEffect(() => {
     if (!isPending && responseData?.audio) {
       const audioUrl = URL.createObjectURL(responseData.audio)
+      console.log('재생할 오디오 URL 설정')
       if (audioRef.current) {
         audioRef.current.src = audioUrl
         audioRef.current.play()
@@ -54,6 +56,11 @@ function RouteComponent() {
       }
     }
   }, [isPending, responseData])
+
+  const handleAudioEnded = () => {
+    console.log('오디오 재생 완료!')
+    setIsDone(true)
+  }
 
   const submitCallback = (audioBlob: Blob) => {
     console.log('녹음 완료:', audioBlob)
@@ -67,12 +74,17 @@ function RouteComponent() {
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-      <audio ref={audioRef} style={{ display: 'none' }} />
+      <audio
+        ref={audioRef}
+        style={{ display: 'none' }}
+        onEnded={handleAudioEnded}
+      />
 
       <VolumeInput
         setVolumeLevel={setVolumeLevel}
         onSubmit={submitCallback}
         onVolumeChange={volumeChangeCallback}
+        isDone={isDone}
       />
       <Button
         size="lg"
